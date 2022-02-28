@@ -8,15 +8,16 @@ source("C:/Users/Milo/Dropbox/My Documents/Programming/Kruschke/DBDA2E-utilities
 require(rjags)
 require(ggplot2)
 require(tidyr)
+require(dplyr)
 fileNameRoot="HierLab" # For output file names.
 
 npops <- 6
 nyears <- 20
 spawners <- array(dim=c(npops,nyears))
 recruits <- array(dim=c(npops,nyears))
-growthData <- array(dim=c(nSpecies,nObs))
+pre_recruits <- array(dim=c(npops,nyears))
+sp <- seq(from=0,to=6000,length.out=nyears)
 
-#growthData <- read.csv("hierarch.csv",header=FALSE) #read in data
 # simulate data
 set.seed(72146)
 #alphas <- c(log(5),log(10),log(5),log(10),log(5),log(10))
@@ -30,6 +31,8 @@ for (ipop in 1:npops) {
   spawners[ipop,1] <- runif(1)*betas[ipop]
   for (iyear in 1:nyears) {
     recruits[ipop,iyear] <- spawners[ipop,iyear]*exp(alphas[ipop]*(1-spawners[ipop,iyear]/betas[ipop])+RCV*rnorm(1))
+    # pre_recruits is for plotting only
+    pre_recruits[ipop,iyear] <- sp[iyear]*exp(alphas[ipop]*(1-sp[iyear]/betas[ipop]))
     if(iyear<nyears) {
       spawners[ipop,iyear+1] <- recruits[ipop,iyear]* (1-hrate)
     } #if iyear
@@ -37,13 +40,25 @@ for (ipop in 1:npops) {
   } #iyear
 } #ipop
 
-jagsData <- list(npops=npops,nyears=nyears,spawners=spawners,recruits=recruits,areas=areas) # data for JAGS
 
 # plot stock-recruit data sets
-smelt <- reshape(jagsData,direction="long")
-#smelt <- as.data.frame(as.table(recruits))
+smelt <- gather(as.data.frame(spawners)) 
+rmelt <- gather(as.data.frame(recruits)) 
+pmelt <- gather(as.data.frame(pre_recruits)) 
+dmelt <- data.frame(pop=rep(seq(1:npops),nyears),year=rep(1:nyears,each=npops),spawners=smelt[,2],
+                    recruits=rmelt[,2],pre_recruits=pmelt[,2],sp=rep(sp,each=npops))
+
+
+pp <- ggplot(dmelt)  + geom_point(aes(spawners,recruits))+ geom_line(aes(sp,pre_recruits),color="red")+ 
+              facet_wrap(~pop)
+pp
+
+
+
 
 ########## JAGS code #############################################
+jagsData <- list(npops=npops,nyears=nyears,spawners=spawners,recruits=recruits,areas=areas) # data for JAGS
+
 
 # Define the model that JAGS will use: this is then written to a text file that JAGS reads in
 # Note - this looks like R code but it isn't. The syntax for JAGS is similar but it is not an R package 
