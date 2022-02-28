@@ -6,6 +6,8 @@ rm(list=ls())  # Careful! This clears all of R's memory!
 
 source("C:/Users/Milo/Dropbox/My Documents/Programming/Kruschke/DBDA2E-utilities.R") # Kruschke's utilities
 require(rjags)
+require(ggplot2)
+require(tidyr)
 fileNameRoot="HierLab" # For output file names.
 
 npops <- 6
@@ -37,6 +39,9 @@ for (ipop in 1:npops) {
 
 jagsData <- list(npops=npops,nyears=nyears,spawners=spawners,recruits=recruits,areas=areas) # data for JAGS
 
+# plot stock-recruit data sets
+smelt <- reshape(jagsData,direction="long")
+#smelt <- as.data.frame(as.table(recruits))
 
 ########## JAGS code #############################################
 
